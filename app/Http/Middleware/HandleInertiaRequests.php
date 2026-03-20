@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\CompanySetting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -42,6 +43,23 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
+            'permissions' => fn () => $request->user()
+                ? $request->user()->getAllPermissions()->pluck('name')->values()->all()
+                : [],
+            'company' => function () {
+                $company = cache()->rememberForever('company_settings', fn () => CompanySetting::first());
+
+                return [
+                    'name' => $company?->name ?? config('app.name'),
+                    'logoUrl' => $company?->logo_path
+                        ? route('file.private', ['path' => $company->logo_path])
+                        : null,
+                ];
+            },
         ];
     }
 }

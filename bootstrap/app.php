@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -42,11 +43,16 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Spatie Laravel Permission middleware aliases
         $middleware->alias([
-            'role'                => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission'          => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission'  => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Inertia-compatible validation error flash: redirect back with errors
+        $exceptions->render(function (ValidationException $e, Request $request) {
+            if ($request->header('X-Inertia')) {
+                return back()->withErrors($e->errors())->withInput();
+            }
+        });
     })->create();
