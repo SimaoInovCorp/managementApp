@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Settings\StoreCalendarTypeRequest;
+use App\Http\Requests\Settings\UpdateCalendarTypeRequest;
+use App\Http\Resources\CalendarTypeResource;
 use App\Models\CalendarType;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,36 +16,32 @@ class CalendarTypeController extends Controller
     public function index(): Response
     {
         return Inertia::render('settings/CalendarTypes', [
-            'types' => CalendarType::orderBy('name')->get(['id', 'name']),
+            'types' => CalendarTypeResource::collection(CalendarType::orderBy('name')->get()),
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreCalendarTypeRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:calendar_types,name'],
-        ]);
+        CalendarType::create($request->validated());
 
-        return response()->json(CalendarType::create($validated), 201);
+        return back()->with('success', 'Calendar type created.');
     }
 
-    public function update(Request $request, CalendarType $calendarType): JsonResponse
+    public function update(UpdateCalendarTypeRequest $request, CalendarType $calendarType): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:calendar_types,name,' . $calendarType->id],
-        ]);
+        $calendarType->update($request->validated());
 
-        $calendarType->update($validated);
-
-        return response()->json($calendarType);
+        return back()->with('success', 'Calendar type updated.');
     }
 
-    public function destroy(CalendarType $calendarType): JsonResponse
+    public function destroy(CalendarType $calendarType): RedirectResponse
     {
-        abort_if($calendarType->calendarEvents()->exists(), 422, 'Cannot delete: type is in use.');
+        if ($calendarType->calendarEvents()->exists()) {
+            return back()->with('error', 'Cannot delete: this type is assigned to existing calendar events.');
+        }
 
         $calendarType->delete();
 
-        return response()->json(null, 204);
+        return back()->with('success', 'Calendar type deleted.');
     }
 }

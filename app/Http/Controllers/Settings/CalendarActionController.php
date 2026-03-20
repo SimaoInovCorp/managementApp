@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Settings\StoreCalendarActionRequest;
+use App\Http\Requests\Settings\UpdateCalendarActionRequest;
+use App\Http\Resources\CalendarActionResource;
 use App\Models\CalendarAction;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,36 +16,32 @@ class CalendarActionController extends Controller
     public function index(): Response
     {
         return Inertia::render('settings/CalendarActions', [
-            'actions' => CalendarAction::orderBy('name')->get(['id', 'name']),
+            'actions' => CalendarActionResource::collection(CalendarAction::orderBy('name')->get()),
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreCalendarActionRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:calendar_actions,name'],
-        ]);
+        CalendarAction::create($request->validated());
 
-        return response()->json(CalendarAction::create($validated), 201);
+        return back()->with('success', 'Calendar action created.');
     }
 
-    public function update(Request $request, CalendarAction $calendarAction): JsonResponse
+    public function update(UpdateCalendarActionRequest $request, CalendarAction $calendarAction): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:calendar_actions,name,' . $calendarAction->id],
-        ]);
+        $calendarAction->update($request->validated());
 
-        $calendarAction->update($validated);
-
-        return response()->json($calendarAction);
+        return back()->with('success', 'Calendar action updated.');
     }
 
-    public function destroy(CalendarAction $calendarAction): JsonResponse
+    public function destroy(CalendarAction $calendarAction): RedirectResponse
     {
-        abort_if($calendarAction->calendarEvents()->exists(), 422, 'Cannot delete: action is in use.');
+        if ($calendarAction->calendarEvents()->exists()) {
+            return back()->with('error', 'Cannot delete: this action is assigned to existing calendar events.');
+        }
 
         $calendarAction->delete();
 
-        return response()->json(null, 204);
+        return back()->with('success', 'Calendar action deleted.');
     }
 }

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Settings\StoreContactRoleRequest;
+use App\Http\Requests\Settings\UpdateContactRoleRequest;
+use App\Http\Resources\ContactRoleResource;
 use App\Models\ContactRole;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,36 +16,32 @@ class ContactRoleController extends Controller
     public function index(): Response
     {
         return Inertia::render('settings/ContactRoles', [
-            'roles' => ContactRole::orderBy('name')->get(['id', 'name']),
+            'roles' => ContactRoleResource::collection(ContactRole::orderBy('name')->get()),
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreContactRoleRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:contact_roles,name'],
-        ]);
+        ContactRole::create($request->validated());
 
-        return response()->json(ContactRole::create($validated), 201);
+        return back()->with('success', 'Contact role created.');
     }
 
-    public function update(Request $request, ContactRole $contactRole): JsonResponse
+    public function update(UpdateContactRoleRequest $request, ContactRole $contactRole): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:contact_roles,name,' . $contactRole->id],
-        ]);
+        $contactRole->update($request->validated());
 
-        $contactRole->update($validated);
-
-        return response()->json($contactRole);
+        return back()->with('success', 'Contact role updated.');
     }
 
-    public function destroy(ContactRole $contactRole): JsonResponse
+    public function destroy(ContactRole $contactRole): RedirectResponse
     {
-        abort_if($contactRole->contacts()->exists(), 422, 'Cannot delete: role is in use.');
+        if ($contactRole->contacts()->exists()) {
+            return back()->with('error', 'Cannot delete: this role is assigned to existing contacts.');
+        }
 
         $contactRole->delete();
 
-        return response()->json(null, 204);
+        return back()->with('success', 'Contact role deleted.');
     }
 }

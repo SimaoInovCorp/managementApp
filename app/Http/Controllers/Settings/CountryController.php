@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Settings\StoreCountryRequest;
+use App\Http\Requests\Settings\UpdateCountryRequest;
+use App\Http\Resources\CountryResource;
 use App\Models\Country;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,39 +16,32 @@ class CountryController extends Controller
     public function index(): Response
     {
         return Inertia::render('settings/Countries', [
-            'countries' => Country::orderBy('name')->get(['id', 'name', 'code']),
+            'countries' => CountryResource::collection(Country::orderBy('name')->get()),
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreCountryRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'code' => ['required', 'string', 'size:2', 'uppercase', 'unique:countries,code'],
-        ]);
+        Country::create($request->validated());
 
-        return response()->json(Country::create($validated), 201);
+        return back()->with('success', 'Country created.');
     }
 
-    public function update(Request $request, Country $country): JsonResponse
+    public function update(UpdateCountryRequest $request, Country $country): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'code' => ['required', 'string', 'size:2', 'uppercase', 'unique:countries,code,' . $country->id],
-        ]);
+        $country->update($request->validated());
 
-        $country->update($validated);
-
-        return response()->json($country);
+        return back()->with('success', 'Country updated.');
     }
 
-    public function destroy(Country $country): JsonResponse
+    public function destroy(Country $country): RedirectResponse
     {
-        // Prevent deletion if entities reference this country
-        abort_if($country->entities()->exists(), 422, 'Cannot delete: country is in use.');
+        if ($country->entities()->exists()) {
+            return back()->with('error', 'Cannot delete: this country is assigned to existing entities.');
+        }
 
         $country->delete();
 
-        return response()->json(null, 204);
+        return back()->with('success', 'Country deleted.');
     }
 }

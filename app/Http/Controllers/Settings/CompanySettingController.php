@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Settings\UpdateCompanyLogoRequest;
+use App\Http\Requests\Settings\UpdateCompanySettingRequest;
 use App\Models\CompanySetting;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,7 +23,7 @@ class CompanySettingController extends Controller
 
         return Inertia::render('settings/Company', [
             'settings' => $settings,
-            'logoUrl'  => $settings->logo_path
+            'logoUrl' => $settings->logo_path
                 ? route('file.private', ['path' => $settings->logo_path])
                 : null,
         ]);
@@ -31,18 +32,10 @@ class CompanySettingController extends Controller
     /**
      * Update the company text settings.
      */
-    public function update(Request $request): RedirectResponse
+    public function update(UpdateCompanySettingRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name'        => ['nullable', 'string', 'max:255'],
-            'address'     => ['nullable', 'string', 'max:255'],
-            'postal_code' => ['nullable', 'string', 'max:20'],
-            'locality'    => ['nullable', 'string', 'max:100'],
-            'tax_number'  => ['nullable', 'string', 'max:20'],
-        ]);
-
         $settings = CompanySetting::firstOrNew([]);
-        $settings->fill($validated)->save();
+        $settings->fill($request->validated())->save();
 
         return back()->with('success', 'Company settings saved.');
     }
@@ -50,12 +43,8 @@ class CompanySettingController extends Controller
     /**
      * Upload / replace the company logo (stored on the private disk).
      */
-    public function updateLogo(Request $request): RedirectResponse
+    public function updateLogo(UpdateCompanyLogoRequest $request): RedirectResponse
     {
-        $request->validate([
-            'logo' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,svg,webp', 'max:2048'],
-        ]);
-
         $settings = CompanySetting::firstOrNew([]);
 
         // Remove old logo to avoid orphaned files

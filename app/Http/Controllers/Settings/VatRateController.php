@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Settings\StoreVatRateRequest;
+use App\Http\Requests\Settings\UpdateVatRateRequest;
+use App\Http\Resources\VatRateResource;
 use App\Models\VatRate;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,38 +16,32 @@ class VatRateController extends Controller
     public function index(): Response
     {
         return Inertia::render('settings/VatRates', [
-            'vatRates' => VatRate::orderBy('rate')->get(['id', 'name', 'rate']),
+            'vatRates' => VatRateResource::collection(VatRate::orderBy('rate')->get()),
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreVatRateRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:vat_rates,name'],
-            'rate' => ['required', 'numeric', 'min:0', 'max:100'],
-        ]);
+        VatRate::create($request->validated());
 
-        return response()->json(VatRate::create($validated), 201);
+        return back()->with('success', 'VAT rate created.');
     }
 
-    public function update(Request $request, VatRate $vatRate): JsonResponse
+    public function update(UpdateVatRateRequest $request, VatRate $vatRate): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:vat_rates,name,' . $vatRate->id],
-            'rate' => ['required', 'numeric', 'min:0', 'max:100'],
-        ]);
+        $vatRate->update($request->validated());
 
-        $vatRate->update($validated);
-
-        return response()->json($vatRate);
+        return back()->with('success', 'VAT rate updated.');
     }
 
-    public function destroy(VatRate $vatRate): JsonResponse
+    public function destroy(VatRate $vatRate): RedirectResponse
     {
-        abort_if($vatRate->articles()->exists(), 422, 'Cannot delete: VAT rate is in use.');
+        if ($vatRate->articles()->exists()) {
+            return back()->with('error', 'Cannot delete: this VAT rate is assigned to existing articles.');
+        }
 
         $vatRate->delete();
 
-        return response()->json(null, 204);
+        return back()->with('success', 'VAT rate deleted.');
     }
 }
