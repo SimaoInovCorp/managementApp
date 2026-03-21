@@ -40,11 +40,11 @@ return [
 
         // Named disk for authenticated private file storage (served via FileAccessController)
         'private' => [
-            'driver'     => 'local',
-            'root'       => storage_path('app/private'),
+            'driver' => 'local',
+            'root' => storage_path('app/private'),
             'visibility' => 'private',
-            'throw'      => true,
-            'report'     => false,
+            'throw' => true,
+            'report' => false,
         ],
 
         'public' => [
