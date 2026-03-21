@@ -7,6 +7,14 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
+import { index as articlesIndex } from '@/routes/settings/config/articles';
+import { index as calendarActionsIndex } from '@/routes/settings/config/calendar-actions';
+import { index as calendarTypesIndex } from '@/routes/settings/config/calendar-types';
+import { show as companyShow } from '@/routes/settings/config/company';
+import { index as contactRolesIndex } from '@/routes/settings/config/contact-roles';
+import { index as countriesIndex } from '@/routes/settings/config/countries';
+import { index as logsIndex } from '@/routes/settings/config/logs';
+import { index as vatRatesIndex } from '@/routes/settings/config/vat-rates';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
 import type { NavItem } from '@/types';
@@ -28,6 +36,17 @@ const sidebarNavItems: NavItem[] = [
         title: 'Appearance',
         href: editAppearance(),
     },
+];
+
+const configNavItems: NavItem[] = [
+    { title: 'Countries', href: countriesIndex() },
+    { title: 'Contact Roles', href: contactRolesIndex() },
+    { title: 'Calendar Types', href: calendarTypesIndex() },
+    { title: 'Calendar Actions', href: calendarActionsIndex() },
+    { title: 'VAT Rates', href: vatRatesIndex() },
+    { title: 'Articles', href: articlesIndex() },
+    { title: 'Company', href: companyShow() },
+    { title: 'Logs', href: logsIndex() },
 ];
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
@@ -61,13 +80,34 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                             {{ item.title }}
                         </Link>
                     </Button>
+
+                    <Separator class="my-2" />
+
+                    <p
+                        class="px-2 py-1 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                    >
+                        Configuration
+                    </p>
+
+                    <Button
+                        v-for="item in configNavItems"
+                        :key="toUrl(item.href)"
+                        variant="ghost"
+                        :class="[
+                            'w-full justify-start',
+                            { 'bg-muted': isCurrentOrParentUrl(item.href) },
+                        ]"
+                        as-child
+                    >
+                        <Link :href="item.href">{{ item.title }}</Link>
+                    </Button>
                 </nav>
             </aside>
 
             <Separator class="my-6 lg:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div class="min-w-0 flex-1">
+                <section class="space-y-12">
                     <slot />
                 </section>
             </div>
